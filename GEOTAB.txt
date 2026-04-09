@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Stock Geotab</title>
+
+<style>
+
+body{
+font-family:Arial;
+background:#f2f4f7;
+margin:40px;
+}
+
+h1{
+text-align:center;
+}
+
+.panel{
+display:flex;
+gap:20px;
+margin-bottom:30px;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:10px;
+box-shadow:0 3px 10px rgba(0,0,0,0.1);
+width:200px;
+text-align:center;
+}
+
+input,select,button{
+padding:8px;
+margin:5px;
+}
+
+table{
+width:100%;
+border-collapse:collapse;
+margin-top:20px;
+background:white;
+}
+
+th,td{
+padding:10px;
+border-bottom:1px solid #ddd;
+}
+
+.instalado{
+background:#d4edda;
+}
+
+button{
+cursor:pointer;
+border:none;
+background:#1976d2;
+color:white;
+border-radius:5px;
+padding:6px 10px;
+}
+
+button.delete{
+background:#d32f2f;
+}
+
+button.export{
+background:#388e3c;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Control de Stock Geotab</h1>
+
+<div class="panel">
+
+<div class="card">
+<h3>GO9</h3>
+<h2 id="go9Total">0</h2>
+</div>
+
+<div class="card">
+<h3>ARNES</h3>
+<h2 id="arnesTotal">0</h2>
+</div>
+
+<div class="card">
+<h3>CAMARAS</h3>
+<h2 id="camTotal">0</h2>
+</div>
+
+<div class="card">
+<h3>SATIRD</h3>
+<h2 id="satTotal">0</h2>
+</div>
+
+</div>
+
+<hr>
+
+<h3>Agregar dispositivo</h3>
+
+<select id="tipo">
+<option>GO9</option>
+<option>CAMARA</option>
+<option>SATIRD</option>
+<option>ARNES</option>
+</select>
+
+<input id="serie" placeholder="Numero de serie (arnes vacío)">
+<button onclick="agregar()">Agregar</button>
+
+<button class="export" onclick="exportar()">Exportar Excel</button>
+
+<hr>
+
+<h3>Buscar</h3>
+
+<input id="buscar" onkeyup="filtrar()" placeholder="Buscar serie">
+
+<select id="filtro" onchange="filtrar()">
+<option value="todos">Todos</option>
+<option value="disponible">Disponibles</option>
+<option value="instalado">Instalados</option>
+</select>
+
+<table>
+
+<thead>
+
+<tr>
+<th>Tipo</th>
+<th>Serie</th>
+<th>Estado</th>
+<th>Instalador</th>
+<th>Acciones</th>
+</tr>
+
+</thead>
+
+<tbody id="tabla"></tbody>
+
+</table>
+
+<script>
+
+let stock = JSON.parse(localStorage.getItem("stock")) || []
+
+function guardar(){
+localStorage.setItem("stock",JSON.stringify(stock))
+}
+
+function agregar(){
+
+let tipo=document.getElementById("tipo").value
+let serie=document.getElementById("serie").value
+
+stock.push({
+tipo:tipo,
+serie:serie,
+estado:"disponible",
+instalador:""
+})
+
+guardar()
+document.getElementById("serie").value=""
+
+mostrar()
+
+}
+
+function instalar(index){
+
+let nombre=prompt("¿Quién realiza la instalación?")
+
+if(!nombre) return
+
+stock[index].estado="instalado"
+stock[index].instalador=nombre
+
+if(stock[index].tipo=="GO9"){
+
+let arnes=stock.find(a=>a.tipo=="ARNES" && a.estado=="disponible")
+
+if(arnes){
+arnes.estado="instalado"
+arnes.instalador=nombre
+}
+
+}
+
+guardar()
+mostrar()
+
+}
+
+function borrar(index){
+
+if(confirm("¿Seguro que querés borrar este registro?")){
+
+stock.splice(index,1)
+
+guardar()
+
+mostrar()
+
+}
+
+}
+
+function mostrar(){
+
+function mostrar(){
+
+})
+
+document.getElementById("go9Total").innerText=go9
+document.getElementById("arnesTotal").innerText=arnes
+document.getElementById("camTotal").innerText=cam
+document.getElementById("satTotal").innerText=sat
+
+filtrar()
+
+}
+
+function filtrar(){
+
+let texto=document.getElementById("buscar").value.toLowerCase()
+
+let filtro=document.getElementById("filtro").value
+
+let tabla=document.getElementById("tabla")
+
+tabla.innerHTML=""
+
+stock.forEach((d,i)=>{
+
+if(d.serie.toLowerCase().includes(texto) || texto==""){
+
+if(filtro=="todos" || filtro==d.estado){
+
+tabla.innerHTML+=`
+
+<tr class="${d.estado=='instalado'?'instalado':''}">
+
+<td>${d.tipo}</td>
+
+<td>${d.serie}</td>
+
+<td>${d.estado}</td>
+
+<td>${d.instalador}</td>
+
+<td>
+
+${d.estado=="disponible" ? `<button onclick="instalar(${i})">Instalar</button>` : ""}
+
+<button class="delete" onclick="borrar(${i})">Borrar</button>
+
+</td>
+
+</tr>
+
+`
+
+}
+
+}
+
+})
+
+}
+
+function exportar(){
+
+let csv="Tipo,Serie,Estado,Instalador\n"
+
+stock.forEach(d=>{
+
+csv+=`${d.tipo},${d.serie},${d.estado},${d.instalador}\n`
+
+})
+
+let blob=new Blob([csv],{type:"text/csv"})
+
+let a=document.createElement("a")
+
+a.href=URL.createObjectURL(blob)
+
+a.download="stock_geotab.csv"
+
+a.click()
+
+}
+
+mostrar()
+
+</script>
+
+</body>
+
+</html>
