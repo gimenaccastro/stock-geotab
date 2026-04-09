@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <title>Stock Geotab</title>
 
+<script src="https://unpkg.com/html5-qrcode"></script>
+
 <style>
 
 body{
@@ -12,9 +14,7 @@ background:#f2f4f7;
 margin:40px;
 }
 
-h1{
-text-align:center;
-}
+h1{text-align:center;}
 
 .panel{
 display:flex;
@@ -62,16 +62,13 @@ border-radius:5px;
 padding:6px 10px;
 }
 
-button.delete{
-background:#d32f2f;
-}
+button.delete{background:#d32f2f;}
+button.export{background:#388e3c;}
+button.uninstall{background:#f57c00;}
 
-button.export{
-background:#388e3c;
-}
-
-button.uninstall{
-background:#f57c00;
+#reader{
+width:300px;
+margin-top:10px;
 }
 
 </style>
@@ -117,8 +114,12 @@ background:#f57c00;
 <option>ARNES</option>
 </select>
 
-<input id="serie" placeholder="Numero de serie (arnes vacío)">
+<input id="serie" placeholder="Numero de serie">
 <button onclick="agregar()">Agregar</button>
+
+<button onclick="iniciarEscaneo()">Escanear serie</button>
+
+<div id="reader"></div>
 
 <button class="export" onclick="exportar()">Exportar Excel</button>
 
@@ -126,7 +127,7 @@ background:#f57c00;
 
 <h3>Buscar</h3>
 
-<input id="buscar" onkeyup="filtrar()" placeholder="Buscar serie">
+<input id="buscar" onkeyup="filtrar()" placeholder="Buscar serie, patente o empresa">
 
 <select id="filtro" onchange="filtrar()">
 <option value="todos">Todos</option>
@@ -141,6 +142,8 @@ background:#f57c00;
 <tr>
 <th>Tipo</th>
 <th>Serie</th>
+<th>Empresa</th>
+<th>Patente</th>
 <th>Estado</th>
 <th>Instalador</th>
 <th>Fecha instalación</th>
@@ -170,6 +173,8 @@ let serie=document.getElementById("serie").value
 stock.push({
 tipo:tipo,
 serie:serie,
+empresa:"",
+patente:"",
 estado:"disponible",
 instalador:"",
 fechaInstalacion:"",
@@ -177,37 +182,26 @@ fechaDesinstalacion:""
 })
 
 guardar()
-
 document.getElementById("serie").value=""
-
 mostrar()
 
 }
 
 function instalar(index){
 
-let nombre=prompt("¿Quién realiza la instalación?")
-if(!nombre) return
+let empresa=prompt("Empresa")
+let patente=prompt("Patente")
+let instalador=prompt("Instalador")
+let fecha=prompt("Fecha instalación (YYYY-MM-DD)")
 
-let fecha=prompt("Fecha de instalación (YYYY-MM-DD)")
-if(!fecha) return
+if(!instalador) return
 
 stock[index].estado="instalado"
-stock[index].instalador=nombre
+stock[index].empresa=empresa
+stock[index].patente=patente
+stock[index].instalador=instalador
 stock[index].fechaInstalacion=fecha
 stock[index].fechaDesinstalacion=""
-
-if(stock[index].tipo=="GO9"){
-
-let arnes=stock.find(a=>a.tipo=="ARNES" && a.estado=="disponible")
-
-if(arnes){
-arnes.estado="instalado"
-arnes.instalador=nombre
-arnes.fechaInstalacion=fecha
-}
-
-}
 
 guardar()
 mostrar()
@@ -216,12 +210,13 @@ mostrar()
 
 function desinstalar(index){
 
-let fecha=prompt("Fecha de desinstalación (YYYY-MM-DD)")
-if(!fecha) return
+let fecha=prompt("Fecha desinstalación")
 
 stock[index].estado="disponible"
-stock[index].instalador=""
 stock[index].fechaDesinstalacion=fecha
+stock[index].empresa=""
+stock[index].patente=""
+stock[index].instalador=""
 stock[index].fechaInstalacion=""
 
 guardar()
@@ -231,13 +226,10 @@ mostrar()
 
 function borrar(index){
 
-if(confirm("¿Seguro que querés borrar este registro?")){
-
+if(confirm("¿Seguro que querés borrar?")){
 stock.splice(index,1)
-
 guardar()
 mostrar()
-
 }
 
 }
@@ -277,14 +269,13 @@ let texto=document.getElementById("buscar").value.toLowerCase()
 let filtro=document.getElementById("filtro").value
 
 let tabla=document.getElementById("tabla")
-
 tabla.innerHTML=""
 
 stock.forEach((d,i)=>{
 
-let serie=d.serie ? d.serie.toLowerCase() : ""
+let contenido=(d.serie+" "+d.empresa+" "+d.patente).toLowerCase()
 
-if(serie.includes(texto) || texto==""){
+if(contenido.includes(texto) || texto==""){
 
 if(filtro=="todos" || filtro==d.estado){
 
@@ -293,11 +284,13 @@ tabla.innerHTML+=`
 <tr class="${d.estado=='instalado'?'instalado':''}">
 
 <td>${d.tipo}</td>
-<td>${d.serie || ""}</td>
+<td>${d.serie}</td>
+<td>${d.empresa}</td>
+<td>${d.patente}</td>
 <td>${d.estado}</td>
-<td>${d.instalador || ""}</td>
-<td>${d.fechaInstalacion || ""}</td>
-<td>${d.fechaDesinstalacion || ""}</td>
+<td>${d.instalador}</td>
+<td>${d.fechaInstalacion}</td>
+<td>${d.fechaDesinstalacion}</td>
 
 <td>
 
@@ -321,24 +314,34 @@ ${d.estado=="instalado" ? `<button class="uninstall" onclick="desinstalar(${i})"
 
 }
 
-function exportar(){
+function iniciarEscaneo(){
 
-let csv="Tipo,Serie,Estado,Instalador,Fecha Instalacion,Fecha Desinstalacion\n"
+const scanner = new Html5QrcodeScanner(
+"reader",
+{ fps:10, qrbox:250 }
+)
 
-stock.forEach(d=>{
+scanner.render((decodedText)=>{
 
-csv+=`${d.tipo},${d.serie},${d.estado},${d.instalador},${d.fechaInstalacion},${d.fechaDesinstalacion}\n`
+document.getElementById("serie").value=decodedText
+scanner.clear()
 
 })
 
+}
+
+function exportar(){
+
+let csv="Tipo,Serie,Empresa,Patente,Estado,Instalador,FechaInstalacion,FechaDesinstalacion\n"
+
+stock.forEach(d=>{
+csv+=`${d.tipo},${d.serie},${d.empresa},${d.patente},${d.estado},${d.instalador},${d.fechaInstalacion},${d.fechaDesinstalacion}\n`
+})
+
 let blob=new Blob([csv],{type:"text/csv"})
-
 let a=document.createElement("a")
-
 a.href=URL.createObjectURL(blob)
-
 a.download="stock_geotab.csv"
-
 a.click()
 
 }
@@ -348,10 +351,4 @@ mostrar()
 </script>
 
 </body>
-</html>
-
-</script>
-
-</body>
-
 </html>
