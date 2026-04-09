@@ -70,6 +70,10 @@ button.export{
 background:#388e3c;
 }
 
+button.uninstall{
+background:#f57c00;
+}
+
 </style>
 
 </head>
@@ -114,7 +118,6 @@ background:#388e3c;
 </select>
 
 <input id="serie" placeholder="Numero de serie (arnes vacío)">
-
 <button onclick="agregar()">Agregar</button>
 
 <button class="export" onclick="exportar()">Exportar Excel</button>
@@ -140,6 +143,8 @@ background:#388e3c;
 <th>Serie</th>
 <th>Estado</th>
 <th>Instalador</th>
+<th>Fecha instalación</th>
+<th>Fecha desinstalación</th>
 <th>Acciones</th>
 </tr>
 
@@ -166,7 +171,9 @@ stock.push({
 tipo:tipo,
 serie:serie,
 estado:"disponible",
-instalador:""
+instalador:"",
+fechaInstalacion:"",
+fechaDesinstalacion:""
 })
 
 guardar()
@@ -180,11 +187,15 @@ mostrar()
 function instalar(index){
 
 let nombre=prompt("¿Quién realiza la instalación?")
-
 if(!nombre) return
+
+let fecha=prompt("Fecha de instalación (YYYY-MM-DD)")
+if(!fecha) return
 
 stock[index].estado="instalado"
 stock[index].instalador=nombre
+stock[index].fechaInstalacion=fecha
+stock[index].fechaDesinstalacion=""
 
 if(stock[index].tipo=="GO9"){
 
@@ -193,9 +204,25 @@ let arnes=stock.find(a=>a.tipo=="ARNES" && a.estado=="disponible")
 if(arnes){
 arnes.estado="instalado"
 arnes.instalador=nombre
+arnes.fechaInstalacion=fecha
 }
 
 }
+
+guardar()
+mostrar()
+
+}
+
+function desinstalar(index){
+
+let fecha=prompt("Fecha de desinstalación (YYYY-MM-DD)")
+if(!fecha) return
+
+stock[index].estado="disponible"
+stock[index].instalador=""
+stock[index].fechaDesinstalacion=fecha
+stock[index].fechaInstalacion=""
 
 guardar()
 mostrar()
@@ -209,7 +236,6 @@ if(confirm("¿Seguro que querés borrar este registro?")){
 stock.splice(index,1)
 
 guardar()
-
 mostrar()
 
 }
@@ -267,16 +293,17 @@ tabla.innerHTML+=`
 <tr class="${d.estado=='instalado'?'instalado':''}">
 
 <td>${d.tipo}</td>
-
 <td>${d.serie || ""}</td>
-
 <td>${d.estado}</td>
-
-<td>${d.instalador}</td>
+<td>${d.instalador || ""}</td>
+<td>${d.fechaInstalacion || ""}</td>
+<td>${d.fechaDesinstalacion || ""}</td>
 
 <td>
 
 ${d.estado=="disponible" ? `<button onclick="instalar(${i})">Instalar</button>` : ""}
+
+${d.estado=="instalado" ? `<button class="uninstall" onclick="desinstalar(${i})">Desinstalar</button>` : ""}
 
 <button class="delete" onclick="borrar(${i})">Borrar</button>
 
@@ -296,11 +323,11 @@ ${d.estado=="disponible" ? `<button onclick="instalar(${i})">Instalar</button>` 
 
 function exportar(){
 
-let csv="Tipo,Serie,Estado,Instalador\n"
+let csv="Tipo,Serie,Estado,Instalador,Fecha Instalacion,Fecha Desinstalacion\n"
 
 stock.forEach(d=>{
 
-csv+=`${d.tipo},${d.serie},${d.estado},${d.instalador}\n`
+csv+=`${d.tipo},${d.serie},${d.estado},${d.instalador},${d.fechaInstalacion},${d.fechaDesinstalacion}\n`
 
 })
 
@@ -317,6 +344,11 @@ a.click()
 }
 
 mostrar()
+
+</script>
+
+</body>
+</html>
 
 </script>
 
